@@ -23,11 +23,15 @@ def start_http_server(port):
     :param port: the port to start the server on
     """
 
+    # create socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+    # bind to the local address on the specified port
     listen_addr = '', port
     server_socket.bind(listen_addr)
-    server_socket.listen()
+
+    # listen for an 10 requests. refuse any after that
+    server_socket.listen(10)
 
     while True:
         conn, addr = server_socket.accept()
@@ -35,30 +39,37 @@ def start_http_server(port):
 
 
 def handle_request(server_socket):
-    print(read_http_request(server_socket))
+    request_line, request_headers = read_http_request(server_socket)
+    http_request, resource, protocol_version = request_line.split(' ', 3)
+
+    if http_request == 'GET':
+        print('GET HTTP request')
+    else:
+        print(f'{http_request} requests are not supported')
 
 
 def read_http_request(server_socket):
     """
-    This method reads in the entire HTTP request line.
+    This method reads in the entire HTTP request.
     :param server_socket: the socket to read bytes from
-    :return: the http request as a bytes object
+    :return: a tuple of the request line and the request headers, in ASCII
     """
 
-    http_request = b''
-
     # all HTTP requests ends with a \r\n\r\n (CR LF CR LF)
+    http_request = b''
     while b'\r\n\r\n' not in http_request:
         http_request += next_byte(server_socket)
 
-    return http_request
+    request_line, request_headers = http_request.decode('ASCII').split('\r\n', 1)
+
+    return request_line, request_headers
 
 
 def next_byte(server_socket):
     """
     This method reads in one byte.
     :param server_socket: the socket to read one byte from
-    :return: a byte object of the byte read in
+    :return: a byte object of the single byte read in
     """
 
     return server_socket.recv(1)
