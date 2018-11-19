@@ -8,6 +8,7 @@ This is a simple web server written in python.
 
 import socket
 from os.path import isfile, join
+from os import stat
 
 
 def main():
@@ -71,6 +72,12 @@ def read_http_request(server_socket):
 
 
 def handle_get_request(server_socket, request_line):
+    """
+    This method handles all HTTP GET requests.
+    :param server_socket: the server socket to receive data from
+    :param request_line: the HTTP request line as a tuple (containing HTTP request, resource, and protocol version)
+    """
+
     http_request, resource, protocol_version = request_line
 
     if resource == '/':
@@ -80,13 +87,42 @@ def handle_get_request(server_socket, request_line):
 
     file = join('resources', resource)
 
-    if isfile(file):
-        # 200 status code
-        print('exists')
+    file_size = get_file_size(file)
+    http_response = get_status_line(file_size)
 
+    http_response += b'Content-length: ' + file_size + b'\r\n'
+    http_response += b'\r\n'
+    server_socket.sendall(http_response)
+
+
+def get_status_line(file_size):
+    """
+    This method returns the status line for the HTTP response based on the file size.
+    :param file_size: the size of the requested file
+    :return: the status line as a bytes object
+    """
+
+    status_line = b'HTTP/1.1 '
+
+    if file_size != b'0':
+        status_line += b' 200 OK\r\n'
     else:
-        # 404 status code
-        print('doesn\'t exist')
+        status_line += b' 404 Not Found\r\n'
+
+    return status_line
+
+
+def get_file_size(resource):
+    """
+    This method gets the size of the resource.
+    :param resource: resource to get size from
+    :return: the file size as an integer
+    """
+
+    file_size = b'0'
+    if isfile(resource):
+        file_size = stat(resource).st_size.encode('ASCII')
+    return file_size
 
 
 def next_byte(server_socket):
