@@ -7,6 +7,7 @@ This is a simple web server written in python.
 """
 
 import socket
+from os.path import isfile, join
 
 
 def main():
@@ -77,7 +78,15 @@ def handle_get_request(server_socket, request_line):
     else:
         resource = resource[1:]
 
-    print(resource)
+    file = join('resources', resource)
+
+    if isfile(file):
+        # 200 status code
+        print('exists')
+
+    else:
+        # 404 status code
+        print('doesn\'t exist')
 
 
 def next_byte(server_socket):
