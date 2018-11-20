@@ -1,4 +1,4 @@
-# simple-httpserver
+# http-server
 This project is for utilizing low level network protocols to create a functioning HTTP server in Python. Individual bytes are sent and read across the network.
 
 This project does not utilize any libraries for reading the data, besides ones for creating TCP sockets and such.
