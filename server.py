@@ -55,6 +55,7 @@ def handle_request(server_socket):
         handle_get_request(server_socket, request_line)
     else:
         print(f'{http_request} requests are not supported')
+        server_socket.sendall(b'HTTP/1.1 405 Method Not Allowed\r\nAllow: GET\r\nContent-Length: 0\r\n\r\n')
 
 
 def read_http_request(server_socket):
@@ -98,11 +99,10 @@ def handle_get_request(server_socket, request_line):
 
     response_headers = get_response_headers(file)
 
-    for header in response_headers:
-        http_response += header
+    for response_header in response_headers:
+        http_response += response_header
 
     http_response += b'\r\n'
-
     http_response += read_file(file)
 
     server_socket.sendall(http_response)
@@ -130,18 +130,20 @@ def get_response_headers(file):
     return response_headers
 
 
-def read_file(resource):
+def read_file(file):
     """
     This method reads the bytes from the resource and returns it.
-    :param resource: the resource to read bytes from
+    :param file: the resource to read bytes from
     :return: the read file as a bytes object
     """
 
     file_data = b''
-    res = open(resource, 'r+b')
 
-    for i in range(get_file_size(resource)):
-        file_data += res.read()
+    if get_file_size(file):
+        res = open(file, 'r+b')
+
+        for i in range(get_file_size(file)):
+            file_data += res.read()
 
     return file_data
 
@@ -183,8 +185,11 @@ def get_mime_type(file):
     :return: the MIME type of the file
     """
 
-    mime_type_and_encoding = guess_type(file)
-    mime_type = mime_type_and_encoding[0]
+    mime_type = 'text/html'
+
+    if get_file_size(file) > 0:
+        mime_type_and_encoding = guess_type(file)
+        mime_type = mime_type_and_encoding[0]
     return mime_type
 
 
