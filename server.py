@@ -1,5 +1,5 @@
 """
-Python Webserver
+Python HTTP Server
  - 11/19/2018
  - Austin Rovge
 
@@ -45,47 +45,62 @@ def start_http_server(port):
             print('Running Threads: ', enumerate())
 
 
-def handle_request(server_socket):
+def handle_request(request_socket):
     """
     This method handles each HTTP request for the server.
-    :param server_socket: the server socket to receive data from
+    :param request_socket: the server socket to receive data from
     """
 
-    request_line, request_headers = read_http_request(server_socket)
+    request_line, request_headers = read_http_request(request_socket)
     http_request, resource, protocol_version = request_line
 
     if http_request == 'GET':
-        handle_get_request(server_socket, request_line)
+        handle_get_request(request_socket, request_line)
+    elif http_request == 'POST':
+        handle_post_request(request_socket, request_line, request_headers)
     else:
         print(f'{http_request} requests are not supported')
-        server_socket.sendall(b'HTTP/1.1 405 Method Not Allowed\r\nAllow: GET\r\n\r\n')
+        request_socket.sendall(b'HTTP/1.1 405 Method Not Allowed\r\nAllow: GET\r\n\r\n')
 
 
-def read_http_request(server_socket):
+def read_http_request(request_socket):
     """
     This method reads in the entire HTTP request.
-    :param server_socket: the socket to read bytes from
+    :param request_socket: the socket to read bytes from
     :return: a tuple of the request line (as a tuple of HTTP request, resource, and protocol version)
-             and the request headers, in ASCII
+             and the request headers, in ASCII. It also returns a dict of the request headers
     """
 
     # all HTTP requests ends with a \r\n\r\n (CR LF CR LF)
     http_request = b''
     while b'\r\n\r\n' not in http_request:
-        http_request += next_byte(server_socket)
+        http_request += next_byte(request_socket)
 
     request_line, request_headers = http_request.decode('ASCII').split('\r\n', 1)
 
     # tuple of HTTP request, resource, and protocol version
     request_line = request_line.split(' ', 3)
 
-    return request_line, request_headers
+    request_header_dictionary = {}
+
+    # separate by different headers
+    request_headers = request_headers.split('\r\n')
+
+    # filter makes sure that no empty strings are processed
+    for header in filter(lambda x: x != "", request_headers):
+        # split by colon(:), only do one split for an array of length 2
+        split_header = header.split(': ', 1)
+
+        # set the header field equal to the header value in the dictionary
+        request_header_dictionary[split_header[0]] = split_header[1]
+
+    return request_line, request_header_dictionary
 
 
-def handle_get_request(server_socket, request_line):
+def handle_get_request(response_socket, request_line):
     """
     This method handles all HTTP GET requests.
-    :param server_socket: the server socket to receive data from
+    :param response_socket: the server socket to receive/send data from
     :param request_line: the HTTP request line as a tuple (containing HTTP request, resource, and protocol version)
     """
 
@@ -108,7 +123,25 @@ def handle_get_request(server_socket, request_line):
     http_response += b'\r\n'
     http_response += read_file(file)
 
-    server_socket.sendall(http_response)
+    response_socket.sendall(http_response)
+
+
+def handle_post_request(response_socket, request_line, request_headers):
+    """
+    This method handles all POST requests sent to the HTTP server.
+    :param response_socket: socket to receive/send data from
+    :param request_line: the request line from the POST request
+    :param request_headers: all request headers as a dict
+    """
+
+    http_request, resource, protocol_version = request_line
+
+    content_length_range = int(request_headers['Content-Length'])
+    body = b''
+    for i in range(content_length_range):
+        body += next_byte(response_socket)
+
+    print(body)
 
 
 def get_response_headers(file):
@@ -178,6 +211,7 @@ def get_file_size(resource):
     file_size = 0
     if isfile(resource):
         file_size = stat(resource).st_size
+
     return file_size
 
 
