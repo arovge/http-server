@@ -9,6 +9,8 @@ This is a simple web server written in python.
 import socket
 from os.path import isfile, join
 from os import stat
+from mimetypes import guess_type
+from datetime import datetime
 
 
 def main():
@@ -102,7 +104,7 @@ def handle_get_request(server_socket, request_line):
     http_response += b'\r\n'
 
     http_response += read_file(file)
-    print(http_response)
+
     server_socket.sendall(http_response)
 
 
@@ -110,16 +112,22 @@ def get_response_headers(file):
     """
     This method returns a list of response headers to be sent back to the client.
     :param file: requested file
-    :return: a dictionary of response headers to be appended to the http response
+    :return: the response headers to be appended to the http response
     """
 
-    response_header_dictionary = []
+    response_headers = []
+
+    timestamp = datetime.utcnow()
+    date = timestamp.strftime('%a, %d %b %Y %H:%M:%S GMT')
+    response_headers.append(b'Date: ' + date.encode('ASCII') + b'\r\n')
 
     content_length = get_file_size(file)
+    response_headers.append(b'Content-Length: ' + str(content_length).encode('ASCII') + b'\r\n')
 
-    response_header_dictionary.append(b'Content-Length: ' + str(content_length).encode('ASCII') + b'\r\n')
+    response_headers.append(b'Content-Type: ' + get_mime_type(file).encode('ASCII') + b'\r\n')
+    response_headers.append(b'Connection: close\r\n')
 
-    return response_header_dictionary
+    return response_headers
 
 
 def read_file(resource):
@@ -166,6 +174,18 @@ def get_file_size(resource):
     if isfile(resource):
         file_size = stat(resource).st_size
     return file_size
+
+
+def get_mime_type(file):
+    """
+    This method gets the MIME type of the requested file.
+    :param file: file to get MIME type from
+    :return: the MIME type of the file
+    """
+
+    mime_type_and_encoding = guess_type(file)
+    mime_type = mime_type_and_encoding[0]
+    return mime_type
 
 
 def next_byte(server_socket):
