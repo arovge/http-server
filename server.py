@@ -55,7 +55,7 @@ def handle_request(server_socket):
         handle_get_request(server_socket, request_line)
     else:
         print(f'{http_request} requests are not supported')
-        server_socket.sendall(b'HTTP/1.1 405 Method Not Allowed\r\nAllow: GET\r\nContent-Length: 0\r\n\r\n')
+        server_socket.sendall(b'HTTP/1.1 405 Method Not Allowed\r\nAllow: GET\r\n\r\n')
 
 
 def read_http_request(server_socket):
@@ -124,7 +124,7 @@ def get_response_headers(file):
     content_length = get_file_size(file)
     response_headers.append(b'Content-Length: ' + str(content_length).encode('ASCII') + b'\r\n')
 
-    response_headers.append(b'Content-Type: ' + get_mime_type(file).encode('ASCII') + b'\r\n')
+    response_headers.append(b'Content-Type: ' + get_mime_type(file) + b'\r\n')
     response_headers.append(b'Connection: close\r\n')
 
     return response_headers
@@ -185,11 +185,11 @@ def get_mime_type(file):
     :return: the MIME type of the file
     """
 
-    mime_type = 'text/html'
+    mime_type = b'text/html'
 
     if get_file_size(file) > 0:
         mime_type_and_encoding = guess_type(file)
-        mime_type = mime_type_and_encoding[0]
+        mime_type = mime_type_and_encoding[0].encode('ASCII')
     return mime_type
 
 
