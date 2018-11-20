@@ -11,6 +11,7 @@ from os.path import isfile, join
 from os import stat
 from mimetypes import guess_type
 from datetime import datetime
+from threading import Thread, enumerate
 
 
 def main():
@@ -27,19 +28,21 @@ def start_http_server(port):
     :param port: the port to start the server on
     """
 
-    # create socket
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # create socket using pythonic with statement
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
 
-    # bind to the local address on the specified port
-    listen_addr = '', port
-    server_socket.bind(listen_addr)
+        # bind to the local address on the specified port
+        listen_addr = '', port
+        server_socket.bind(listen_addr)
 
-    # listen for an 10 requests. refuse any after that
-    server_socket.listen(10)
+        # listen for an 10 requests. refuse any after that
+        server_socket.listen(10)
 
-    while True:
-        conn, addr = server_socket.accept()
-        handle_request(conn)
+        while True:
+            request_socket, request_address = server_socket.accept()
+            thread = Thread(target=handle_request, args=(request_socket,))
+            thread.start()
+            print('Running Threads: ', enumerate())
 
 
 def handle_request(server_socket):
