@@ -41,6 +41,11 @@ def start_http_server(port):
 
 
 def handle_request(server_socket):
+    """
+    This method handles each HTTP request for the server.
+    :param server_socket: the server socket to receive data from
+    """
+
     request_line, request_headers = read_http_request(server_socket)
     http_request, resource, protocol_version = request_line
 
@@ -80,19 +85,57 @@ def handle_get_request(server_socket, request_line):
 
     http_request, resource, protocol_version = request_line
 
-    if resource == '/':
+    resource = resource[1:]
+    if resource == '':
         resource = 'index.html'
-    else:
-        resource = resource[1:]
 
     file = join('resources', resource)
 
     file_size = get_file_size(file)
     http_response = get_status_line(file_size)
 
-    http_response += b'Content-length: ' + file_size + b'\r\n'
+    response_headers = get_response_headers(file)
+
+    for header in response_headers:
+        http_response += header
+
     http_response += b'\r\n'
+
+    http_response += read_file(file)
+    print(http_response)
     server_socket.sendall(http_response)
+
+
+def get_response_headers(file):
+    """
+    This method returns a list of response headers to be sent back to the client.
+    :param file: requested file
+    :return: a dictionary of response headers to be appended to the http response
+    """
+
+    response_header_dictionary = []
+
+    content_length = get_file_size(file)
+
+    response_header_dictionary.append(b'Content-Length: ' + str(content_length).encode('ASCII') + b'\r\n')
+
+    return response_header_dictionary
+
+
+def read_file(resource):
+    """
+    This method reads the bytes from the resource and returns it.
+    :param resource: the resource to read bytes from
+    :return: the read file as a bytes object
+    """
+
+    file_data = b''
+    res = open(resource, 'r+b')
+
+    for i in range(get_file_size(resource)):
+        file_data += res.read()
+
+    return file_data
 
 
 def get_status_line(file_size):
@@ -104,10 +147,10 @@ def get_status_line(file_size):
 
     status_line = b'HTTP/1.1 '
 
-    if file_size != b'0':
-        status_line += b' 200 OK\r\n'
+    if file_size > 0:
+        status_line += b'200 OK\r\n'
     else:
-        status_line += b' 404 Not Found\r\n'
+        status_line += b'404 Not Found\r\n'
 
     return status_line
 
@@ -119,9 +162,9 @@ def get_file_size(resource):
     :return: the file size as an integer
     """
 
-    file_size = b'0'
+    file_size = 0
     if isfile(resource):
-        file_size = stat(resource).st_size.encode('ASCII')
+        file_size = stat(resource).st_size
     return file_size
 
 
